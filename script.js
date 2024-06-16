@@ -1,4 +1,7 @@
-const fs = require('node:fs');
+const fs = require('fs');
+const idsFilePath = '/root/bot/ids.json'; //Linux
+// const idsFilePath = './ids.json'; //Windows
+const now = new Date();
 
 function containsTargetWords(str) {
     // Регулярное выражение для поиска целевых слов/фраз, игнорируя регистр 
@@ -88,97 +91,70 @@ async function start() {
             let oldIds;
 
             try {
-                oldIds = JSON.parse(fs.readFileSync('./ids.json', 'utf-8'));
+                oldIds = JSON.parse(fs.readFileSync(idsFilePath, 'utf-8'));
             } catch (err) {
                 console.log(err);
             }
- 
+
             if (oldIds) {
                 ids.forEach(id => {
                     if (oldIds.indexOf(id) != -1) {
-                        console.log(`Заявка ${id} уже была раньше обработана. Возможно она была отменена вручную. Не беру её.`)
+                        console.log(`${now} : Заявка ${id} уже была раньше обработана. Возможно она была отменена вручную. Не беру её.`)
                     } else {
-                        console.log(`Беру заявку ${id} и записываю в список обработанных`);
-                        
-                        // 4) по id получить вес и объем каждого заказа
-            const ordersWithParams = [];
+                        console.log(`${now} : Беру в работу заявку ${id} и записываю в список обработанных`);
 
-            const promises = ids.map(async (id) => {
-                const orderParams = await getOrderParams(token, id);
+                        // 4) по id получить вес и объем заказа
+                        const suitableOffers = [];
 
-                const item = {
-                    id: orderParams._id,
-                    code: orderParams.code,
-                    loading_address: orderParams.loading_address,
-                    unloading_address: orderParams.unloading_address,
-                    weight: orderParams.all_requirements.weight,
-                    volume: orderParams.all_requirements.volume,
-                };
+                        async function useNewOrderFlow() {
+                            const orderParams = await getOrderParams(token, id);
 
-                return item;
-            });
+                            const item = {
+                                id: orderParams._id,
+                                code: orderParams.code,
+                                loading_address: orderParams.loading_address,
+                                unloading_address: orderParams.unloading_address,
+                                weight: orderParams.all_requirements.weight,
+                                volume: orderParams.all_requirements.volume,
+                            };
 
-            // 5) подобрать подходящие по весу и объему заказы
-            const suitableOffers = [];
-
-            Promise.all(promises)
-                .then(async (results) => {
-                    ordersWithParams.push(...results);
-
-                    ordersWithParams.forEach(order => {
-
-                        if (order.weight >= 1.5 &&
-                            order.weight <= 8.5 &&
-                            order.volume < 50 &&
-                            containsTargetWords(order.loading_address) &&
-                            containsTargetWords(order.unloading_address)
-                        ) {
-                            suitableOffers.push(order);
-                        }
-                    });
-
-                    // 6) если есть подходящие заказы, принять их
-                    if (suitableOffers.length > 0) {
-                        console.log(suitableOffers)
-                        const promises = suitableOffers.map(async (order) => {
-                            try {
-                                const isApproved = await approveOrder(token, order.id);
-                                console.log(`Заказ ${ order.id } c кодом ${order.code} был ${await isApproved }`);
-                                return isApproved;
-                            } catch (error) {
-                                console.error(`Ошибка при одобрении заказа ${ order.id } c кодом ${order.code} :`, error);
-                                return false; // Или другой результат при ошибке
+                            // 5) подобрать подходящие по адресу, весу и объему заказы
+                            if (item.weight >= 1.5 &&
+                                item.weight <= 8.5 &&
+                                item.volume < 50 &&
+                                containsTargetWords(item.loading_address) &&
+                                containsTargetWords(item.unloading_address)
+                            ) {
+                                // 6) если есть подходящие заказы, принять их
+                                try {
+                                    const isApproved = await approveOrder(token, item.id);
+                                    console.log(`${now} : Заказ ${item.id} c кодом ${item.code} была взята в работу`);
+                                    return isApproved;
+                                } catch (error) {
+                                    console.error(`${now} : Ошибка при одобрении заказа ${item.id} c кодом ${item.code} :`, error);
+                                    return false; // Или другой результат при ошибке
+                                }
+                            } else {
+                                console.log(`${now} : Заявка ${id} не подошла по параметрам`);
+                                // console.log(ordersWithParams);
                             }
-                        });
 
-                        for (const promise of promises) {
-                            try {
-                                const isApproved = await promise;
-                                // Дополнительные действия с результатом isApproved
-                            } catch (error) {
-                                console.error('Ошибка при ожидании выполнения промиса:', error);
-                            }
+                            oldIds.push(id);
+
+                            fs.writeFile(idsFilePath, JSON.stringify(oldIds), err => {
+                                // fs.writeFile(idsFilePath, JSON.stringify([]), err => { //для тестирования
+                                if (err) {
+                                    console.log(err);
+                                }
+                            });
                         }
-                    } else {
-                        console.log('сейчас нет подходящих заказов');
-                        console.log(ordersWithParams);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching order params:', error);
-                });
-
-                        oldIds.push(id);
+                       
+                        useNewOrderFlow();
                     }
                 });
-    
+            } else {
+                console.error('Не прочитан файл ids.json , что-то пошло не так');
             }
-
-            fs.writeFile('./ids.json', JSON.stringify(oldIds), err => {
-                if (err) {
-                    console.log(err);
-                }
-            });
         }
     }
 }
