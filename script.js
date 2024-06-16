@@ -1,6 +1,6 @@
 const fs = require('fs');
-const idsFilePath = '/root/bot/ids.json'; //Linux
-// const idsFilePath = './ids.json'; //Windows
+// const idsFilePath = '/root/bot/ids.json'; //Linux
+const idsFilePath = './ids.json'; //Windows
 const now = new Date();
 
 function containsTargetWords(str) {
@@ -114,14 +114,15 @@ async function start() {
                                 code: orderParams.code,
                                 loading_address: orderParams.loading_address,
                                 unloading_address: orderParams.unloading_address,
-                                weight: orderParams.all_requirements.weight,
-                                volume: orderParams.all_requirements.volume,
+                                weight: orderParams.all_requirements.weight, //у господ это ОБЪЕМ
+                                volume: orderParams.all_requirements.volume, //у господ это МАКС. ВЫСОТА ПОДДОНА
+                                width: orderParams.all_requirements.width, //у господ это ВЕС, судя по тому что они показывают у себя на сайте
                             };
-
+                            console.log(item)
                             // 5) подобрать подходящие по адресу, весу и объему заказы
-                            if (item.weight >= 1.5 &&
-                                item.weight <= 8.5 &&
-                                item.volume < 50 &&
+                            if (item.width >= 1500 && // это ВЕС
+                                item.width <= 8500 && // это ВЕС
+                                item.weight < 50 && // это ОБЪЕМ
                                 containsTargetWords(item.loading_address) &&
                                 containsTargetWords(item.unloading_address)
                             ) {
