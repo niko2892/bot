@@ -129,7 +129,7 @@ async function start() {
                                 // 6) если есть подходящие заказы, принять их
                                 try {
                                     const isApproved = await approveOrder(token, item.id);
-                                    console.log(`${now} : Заказ ${item.id} c кодом ${item.code} была взята в работу`);
+                                    console.log(`${now} : Заявка ${item.id} c кодом ${item.code} была взята в работу`);
                                     return isApproved;
                                 } catch (error) {
                                     console.error(`${now} : Ошибка при одобрении заказа ${item.id} c кодом ${item.code} :`, error);
