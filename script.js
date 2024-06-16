@@ -118,7 +118,7 @@ async function start() {
                                 volume: orderParams.all_requirements.volume, //у господ это МАКС. ВЫСОТА ПОДДОНА
                                 width: orderParams.all_requirements.width, //у господ это ВЕС, судя по тому что они показывают у себя на сайте
                             };
-                            console.log(item)
+                            // console.log(item)
                             // 5) подобрать подходящие по адресу, весу и объему заказы
                             if (item.width >= 1500 && // это ВЕС
                                 item.width <= 8500 && // это ВЕС
