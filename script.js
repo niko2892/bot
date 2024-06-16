@@ -1,3 +1,13 @@
+const fs = require('node:fs');
+
+function containsTargetWords(str) {
+    // Регулярное выражение для поиска целевых слов/фраз, игнорируя регистр 
+    const regex = /московская обл|московская область|москва/i;
+
+    // Метод test возвращает true, если строка содержит хотя бы одно из целевых слов/фраз 
+    return regex.test(str);
+}
+
 async function getAuthToken(username, password) {
     const token = await fetch("https://dostavka.tstn.ru/api/login/authenticate2", {
         "headers": {
@@ -67,7 +77,7 @@ async function start() {
     if (token) {
         const orders = await getOrders(token);
 
-        // 3) если заказы есть, то получить их id
+        // 3) если заказы есть, то получить их id и сохранить в файл
         if (orders) {
             const ids = [];
 
@@ -75,8 +85,22 @@ async function start() {
                 ids.push(order._id);
             });
 
+            let oldIds;
 
-            // 4) по id получить вес и объем каждого заказа
+            try {
+                oldIds = JSON.parse(fs.readFileSync('./ids.json', 'utf-8'));
+            } catch (err) {
+                console.log(err);
+            }
+ 
+            if (oldIds) {
+                ids.forEach(id => {
+                    if (oldIds.indexOf(id) != -1) {
+                        console.log(`Заявка ${id} уже была раньше обработана. Возможно она была отменена вручную. Не беру её.`)
+                    } else {
+                        console.log(`Беру заявку ${id} и записываю в список обработанных`);
+                        
+                        // 4) по id получить вес и объем каждого заказа
             const ordersWithParams = [];
 
             const promises = ids.map(async (id) => {
@@ -84,9 +108,13 @@ async function start() {
 
                 const item = {
                     id: orderParams._id,
+                    code: orderParams.code,
+                    loading_address: orderParams.loading_address,
+                    unloading_address: orderParams.unloading_address,
                     weight: orderParams.all_requirements.weight,
                     volume: orderParams.all_requirements.volume,
                 };
+
                 return item;
             });
 
@@ -94,26 +122,31 @@ async function start() {
             const suitableOffers = [];
 
             Promise.all(promises)
-                .then(async(results) => {
+                .then(async (results) => {
                     ordersWithParams.push(...results);
 
                     ordersWithParams.forEach(order => {
 
-                        if (order.weight >= 1.5 && order.weight <= 8.5 && order.volume < 50) {
+                        if (order.weight >= 1.5 &&
+                            order.weight <= 8.5 &&
+                            order.volume < 50 &&
+                            containsTargetWords(order.loading_address) &&
+                            containsTargetWords(order.unloading_address)
+                        ) {
                             suitableOffers.push(order);
                         }
                     });
 
                     // 6) если есть подходящие заказы, принять их
                     if (suitableOffers.length > 0) {
-
+                        console.log(suitableOffers)
                         const promises = suitableOffers.map(async (order) => {
                             try {
                                 const isApproved = await approveOrder(token, order.id);
-                                console.log(`Заказ ${ order.id } был ${await isApproved }`);
+                                console.log(`Заказ ${ order.id } c кодом ${order.code} был ${await isApproved }`);
                                 return isApproved;
                             } catch (error) {
-                                console.error(`Ошибка при одобрении заказа ${ order.id }:`, error);
+                                console.error(`Ошибка при одобрении заказа ${ order.id } c кодом ${order.code} :`, error);
                                 return false; // Или другой результат при ошибке
                             }
                         });
@@ -127,19 +160,27 @@ async function start() {
                             }
                         }
                     } else {
-                        console.log('сейчас нет подходящих заказов')
+                        console.log('сейчас нет подходящих заказов');
+                        console.log(ordersWithParams);
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching order params:', error);
                 });
+
+                        oldIds.push(id);
+                    }
+                });
+    
+            }
+
+            fs.writeFile('./ids.json', JSON.stringify(oldIds), err => {
+                if (err) {
+                    console.log(err);
+                }
+            });
         }
     }
 }
 
 start();
-
-
-
-// вес от 1500 до 8500 кг
-// объем до 50 кубов
