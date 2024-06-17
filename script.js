@@ -2,7 +2,7 @@ const fs = require('fs');
 const idsFilePath = '/root/bot/ids.json'; //Linux
 // const idsFilePath = './ids.json'; //Windows
 const now = new Date();
-require('dotenv').config();
+require('dotenv').config({path: '/root/bot/.env'});
 
 function containsTargetWords(str) {
     // Регулярное выражение для поиска целевых слов/фраз, игнорируя регистр 
