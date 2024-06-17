@@ -130,6 +130,18 @@ async function start() {
                                 try {
                                     const isApproved = await approveOrder(token, item.id);
                                     console.log(`${now} : Заявка ${item.id} c кодом ${item.code} была взята в работу`);
+
+                                    oldIds.push(id);
+
+                                    fs.writeFile(idsFilePath, JSON.stringify(oldIds), err => {
+                                        // fs.writeFile(idsFilePath, JSON.stringify([]), err => { //для тестирования
+                                        if (err) {
+                                            console.log(err);
+                                        } else {
+                                            console.log(`${now} : Обновляю список обработанных заявок. Новый список: ${JSON.stringify(oldIds)}`);
+                                        }
+                                    });
+
                                     return isApproved;
                                 } catch (error) {
                                     console.error(`${now} : Ошибка при одобрении заказа ${item.id} c кодом ${item.code} :`, error);
