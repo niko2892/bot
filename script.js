@@ -1,6 +1,6 @@
 const fs = require('fs');
-// const idsFilePath = '/root/bot/ids.json'; //Linux
-const idsFilePath = './ids.json'; //Windows
+const idsFilePath = '/root/bot/ids.json'; //Linux
+// const idsFilePath = './ids.json'; //Windows
 const now = new Date();
 
 function containsTargetWords(str) {
@@ -146,6 +146,8 @@ async function start() {
                                 // fs.writeFile(idsFilePath, JSON.stringify([]), err => { //для тестирования
                                 if (err) {
                                     console.log(err);
+                                } else {
+                                    console.log(`${now} : Обновляю список обработанных заявок. Новый список: ${JSON.stringify(oldIds)}`);
                                 }
                             });
                         }
