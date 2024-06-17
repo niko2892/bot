@@ -2,6 +2,7 @@ const fs = require('fs');
 const idsFilePath = '/root/bot/ids.json'; //Linux
 // const idsFilePath = './ids.json'; //Windows
 const now = new Date();
+require('dotenv').config();
 
 function containsTargetWords(str) {
     // Регулярное выражение для поиска целевых слов/фраз, игнорируя регистр 
@@ -74,7 +75,7 @@ async function approveOrder(token, id) {
 
 async function start() {
     // 1) получить токен для выполнения запросов
-    const token = await getAuthToken('Matrenin', '1234567890');
+    const token = await getAuthToken(process.env.TSTN_LOGIN, process.env.TSTN_PASSWORD);
     // 2) получить свободные заказы
 
     if (token) {
@@ -174,4 +175,8 @@ async function start() {
     }
 }
 
-start();
+if(process.env.IS_BOT_ENABLED == "true") {
+    start();
+} else {
+    console.log(`${now} : Бот сейчас выключен через телеграм`);
+}
